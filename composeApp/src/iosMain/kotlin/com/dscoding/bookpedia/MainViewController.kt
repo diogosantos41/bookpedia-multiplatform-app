@@ -1,13 +1,11 @@
 package com.dscoding.bookpedia
 
-import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
-import io.ktor.client.engine.darwin.Darwin
+import com.dscoding.bookpedia.app.App
+import com.dscoding.bookpedia.di.initKoin
 
-fun MainViewController() = ComposeUIViewController {
-    App(
-        engine = remember {
-            Darwin.create()
-        }
-    )
-}
+fun MainViewController() = ComposeUIViewController(
+    configure = {
+        initKoin()
+    }
+) { App() }

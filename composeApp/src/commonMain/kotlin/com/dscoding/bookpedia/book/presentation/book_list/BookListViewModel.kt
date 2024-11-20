@@ -23,10 +23,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class BookListViewModel(private val repository: BookRepository) : ViewModel() {
+class BookListViewModel(
+    private val bookRepository: BookRepository
+) : ViewModel() {
 
     private var cachedBooks = emptyList<Book>()
     private var searchJob: Job? = null
+    private var observeFavoriteJob: Job? = null
 
     private val _state = MutableStateFlow(BookListState())
     val state = _state
@@ -34,16 +37,18 @@ class BookListViewModel(private val repository: BookRepository) : ViewModel() {
             if (cachedBooks.isEmpty()) {
                 observeSearchQuery()
             }
+            observeFavoriteBooks()
         }
         .stateIn(
             viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
+            SharingStarted.WhileSubscribed(5000L),
             _state.value
         )
 
     fun onAction(action: BookListAction) {
         when (action) {
             is BookListAction.OnBookClick -> {
+
             }
 
             is BookListAction.OnSearchQueryChange -> {
@@ -58,6 +63,20 @@ class BookListViewModel(private val repository: BookRepository) : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun observeFavoriteBooks() {
+        observeFavoriteJob?.cancel()
+        observeFavoriteJob = bookRepository
+            .getFavoriteBooks()
+            .onEach { favoriteBooks ->
+                _state.update {
+                    it.copy(
+                        favoriteBooks = favoriteBooks
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun observeSearchQuery() {
@@ -91,7 +110,7 @@ class BookListViewModel(private val repository: BookRepository) : ViewModel() {
                 isLoading = true
             )
         }
-        repository
+        bookRepository
             .searchBooks(query)
             .onSuccess { searchResults ->
                 _state.update {
@@ -107,10 +126,10 @@ class BookListViewModel(private val repository: BookRepository) : ViewModel() {
                     it.copy(
                         searchResults = emptyList(),
                         isLoading = false,
-                        errorMessage = error.toUiText(),
+                        errorMessage = error.toUiText()
                     )
                 }
-
             }
     }
+
 }
